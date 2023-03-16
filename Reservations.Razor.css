@@ -1,0 +1,25 @@
+﻿.ReservationsParent {
+    text-align: center;
+}
+
+.Reservations, .Reserve {
+    display: inline-block;
+    margin-right: 200px;
+    padding: 5px;
+}
+
+.center-table {
+    margin: 0 auto; /* set left and right margins to auto */
+    width: 50%; /* optional: set a width for the tables */
+    text-align: left;
+}
+
+th div {
+    text-align: left;
+    padding-right: 10px;
+}
+
+.ReserveButton {
+    text-align: center;
+    padding: 20px;
+}

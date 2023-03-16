@@ -1,0 +1,38 @@
+﻿.FlightsParent {
+    display: flex;
+    column-gap: 10px;
+}
+
+.Flights {
+    height: 50px;
+    flex-direction: row;
+    width: 50%;
+}
+
+.Reserves {
+    height: 50px;
+    flex-direction: row;
+    width: 50%;
+}
+
+.ButtonParent{
+    display: flex;
+}
+
+.Button{
+    flex-direction: row;
+    padding-right: 20px;
+    padding-top: 20px;
+}
+
+select {
+    width: 110px;
+}
+
+.ButtonForReserve {
+    display: inline-flex;
+}
+
+.ReserveButton, .ListButton {
+    margin-right: 10px; /* add some space between the buttons */
+}

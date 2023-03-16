@@ -1,0 +1,381 @@
+﻿@page "/Reservations"
+
+@using Traveless.Data
+@using System.IO
+@using System.Linq
+@inject IJSRuntime JSRuntime
+@using System.Reflection;
+
+
+
+
+<div class="ReservationsParent">
+    <div class="Reservations">
+        <h2>Reservations</h2>
+    </div>
+    <div class="Reserve">
+        <h2>Reserve</h2>
+        
+    </div>
+</div>
+
+<div class="ReserveParent">
+</div>
+
+
+<div class="ReservationFinder">
+    <table>
+        <tr>
+            <th width="60%">
+                <ul>
+ 
+                    <li>@displayResCode</li>
+                    <li>@displayFlightCode</li>
+                    <li>@displayAirline</li>
+                    <li>@displayName</li>
+                    <li>@displayCitizenship</li>
+                    
+                </ul>
+            </th>
+            <th width="40%">
+                <div>
+                    <br />
+                    <form>
+                        <table>
+                            <tr>
+                                <th><label for="Code">Code:</label></th>
+                                <th><input type="text" id="Code" name="Code" value="@displayResCode" readonly /><br /></th>
+                            </tr>
+
+                            <tr>
+                                <th><label for="Flight">Flight:</label></th>
+                                <th><input type="text" id="Flight" name="Flight" value="@displayFlightCode" readonly><br /></th>
+                            </tr>
+
+                            <tr>
+                                <th><label for="Airline">Airline:</label></th>
+                                <th><input type="text" id="Airline" name="Airline" value="@displayAirline" readonly /><br /></th>
+                            </tr>
+
+                            <tr>
+                                <th><label for="Cost">Cost:</label></th>
+                                <th><input type="text" id="Cost" name="Cost" value="@displayCost" readonly /><br /></th>
+                            </tr>
+
+                            <tr>
+                                <th><label for="Name">Name:</label></th>
+                                <th><input type="text" id="Name" name="Name" @bind="newName" /><br /></th>
+                            </tr>
+
+                            <tr>
+                                <th><label for="Cititzenship">Citizenship:</label></th>
+                                <th><input type="text" id="Citizenship" name="Citizenship" @bind="newCitizenship" /><br /></th>
+                            </tr>
+
+
+                            <tr>
+                                <th style="text-align: left;"><label for="Status">Status:</label></th>
+                                <th style="text-align: left;">
+                                    <select id="Status" name="Status">
+                                        <option value="Active">Active</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
+                                </th>
+                            </tr>
+                        </table>
+                    </form>
+                    <div class="ButtonForReserve">
+                        <div class="ReserveButton">
+                            <button type="button" @onclick="DisplayList">Reserve</button>
+                        </div>
+                    </div>
+                </div>
+            </th>
+        </tr>
+    </table>
+</div>
+
+
+
+<div>
+    <form>
+        <table class="center-table">
+            <tr>
+                <th><div>Search</div></th>
+            </tr>
+        </table>
+    </form>
+</div>
+
+<div>
+    <br />
+    <form>
+        <table class="center-table">
+            <tr>
+                <th><label for="Code">Code:</label></th>
+                <th><input type="text" id="Code" name="Code" @bind="viewCode" /><br /></th>
+            </tr>
+
+            <tr>
+                <th><label for="Airline">Airline:</label></th>
+                <th><input type="text" id="Airline" name="Airline" @bind="viewAirline"/><br /></th>
+            </tr>
+
+            <tr>
+                <th><label for="Name">Name:</label></th>
+                <th><input type="text" id="Name" name="Name" @bind="viewName"><br /></th>
+            </tr>
+        </table>
+    </form>
+    <div class="centered-button">
+        <div class="ButtonForReserve">
+            <div class="ReserveButton">
+                <button type="button" @onclick = "ReservationReader">Find Reservation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+   
+    //create variables 
+    string viewName;
+    string viewCode;
+    string viewAirline;
+
+    protected string reservedCode;
+    protected string flightAirline;
+    protected string customerName;
+    protected string submitReservedCode;
+    protected string submitFlightAirline;
+    protected string submitCustomerName;
+
+
+    protected string displayResCode;
+    protected string displayFlightCode;
+    protected string displayAirline;
+    protected string displayName;
+    protected string displayCost;
+    protected string displayCitizenship;
+
+    public string newName;
+    public string newCitizenship;
+
+
+
+    //create method to reed and display the list
+    public void ReservationReader()
+    {
+        string? name = null;
+        string? code = null;
+        string? airline = null;
+
+        string fileName = "ReservationMade.csv";
+        //find directory for resources
+        var appLocation = Assembly.GetEntryAssembly().Location;
+        string path = Directory.GetParent(Path.GetDirectoryName(appLocation)).Parent.Parent.Parent.Parent + "\\Resources\\";
+        string filePath = Path.Combine(path, fileName);
+
+        //lists for the reservation read and the reservations
+        List<string> reservationReadList = new List<string>();
+        List<ForReservation> reservationList = new List<ForReservation>();
+
+        if (!string.IsNullOrEmpty(viewName))
+        {
+            name = viewName;
+        }
+        if (!string.IsNullOrEmpty(viewCode))
+        {
+            code = viewCode;
+        }
+        if (!string.IsNullOrEmpty(viewAirline))
+        {
+            airline = viewAirline;
+        }
+
+        using (var reader = new StreamReader(filePath))
+        {
+            while (!reader.EndOfStream)
+            {
+                string line = reader.ReadLine();
+                reservationReadList.Add(line);
+            }
+        }
+
+        foreach (string line in reservationReadList)
+        {
+            //create new reservation object to add to list
+            string[] reservationData = line.Split(",");
+            ForReservation reservation = new ForReservation(reservationData[0], reservationData[1], reservationData[2], reservationData[3], float.Parse(reservationData[4]), reservationData[5], reservationData[6], reservationData[7]);
+            reservationList.Add(reservation);
+        }
+
+
+
+        // a list for user that user input matched result
+        List<ForReservation> matchingReservations = new List<ForReservation>();
+
+        foreach (ForReservation reservation in reservationList)
+        {
+            if ((!string.IsNullOrEmpty(code) && reservation.ResCode.Contains(code))
+                    || (!string.IsNullOrEmpty(airline) && reservation.AirlineName.Contains(airline))
+                    || (!string.IsNullOrEmpty(name) && reservation.Name.Contains(name)))
+           
+            {
+                matchingReservations.Add(reservation);
+            }
+        }
+
+        
+        foreach (ForReservation reservation in matchingReservations)
+            {
+                // Display reservation information
+                displayResCode = reservation.ResCode;
+                displayFlightCode = reservation.FlightCode;
+                displayAirline = reservation.AirlineName;
+                displayName = reservation.Name;
+                displayCost = reservation.FlightPrice.ToString();
+                displayCitizenship = reservation.Citizenship;
+                newCitizenship = displayCitizenship;
+                newName = displayName;
+            }
+        
+
+
+        // a list for user that user did not input matched result or input nothing
+        List<ForReservation> notmatchingReservations = new List<ForReservation>();
+
+        foreach (ForReservation reservation in reservationList)
+        {
+            if ((string.IsNullOrEmpty(code))
+                && (string.IsNullOrEmpty(airline))
+                && (string.IsNullOrEmpty(name) ))
+            {
+                notmatchingReservations.Add(reservation);
+            }
+        }
+
+
+        // Display reservation information
+        string message = "Reservations:\n";
+        foreach (ForReservation reservation in notmatchingReservations)
+        {
+            message += $"Flight Code: {reservation.FlightCode}\n";
+            message += $"Airline Name: {reservation.AirlineName}\n";
+            message += $"Flight Day: {reservation.FlightDay}\n";
+            message += $"Flight Time: {reservation.FlightTime}\n";
+            message += $"Flight Price: {reservation.FlightPrice}\n";
+            message += $"Name: {reservation.Name}\n";
+            message += $"Citizenship: {reservation.Citizenship}\n";
+            message += $"Reservation Code: {reservation.ResCode}\n";
+            message += "\n";
+        }
+        if (matchingReservations.Count == 0)
+        {
+            message += "All reservations found";
+        }
+        var title = "Reservations";
+        var buttonText = "Reservation Found";
+        Application.Current.MainPage.DisplayAlert(title, message, buttonText);
+    }
+
+    // method to show a pop up message
+    public void DisplayList()
+    {
+        string message = "Reservations:\n";
+        var title = "Reservations";
+        var buttonText = "OK";
+
+        UpdateReservation(displayResCode, displayFlightCode, newName, newCitizenship); // Call the method before displaying the alert message
+
+        Application.Current.MainPage.DisplayAlert(title, message, buttonText);
+    }
+
+    public static string[] FlightData()
+    {
+        string[] flightData = Traveless.Properties.Resources.flights.Split(Environment.NewLine);
+        return flightData;
+    }
+
+    public static string[] AirportData()
+    {
+        string[] airportData = Traveless.Properties.Resources.airports.Split(Environment.NewLine);
+        return airportData;
+    }
+
+    string[] airportData = AirportData();
+
+    public string AirlineData(string airlineCode)
+    {
+        string[] airlineData = Traveless.Properties.Resources.airlines.Split("\n");
+        string matchingAirline = "";
+        foreach (string airline in airlineData)
+        {
+
+            string[] airlineArray = airline.Split(',');
+
+            if (airlineCode == airlineArray[0])
+            {
+
+                matchingAirline = airlineArray[1];
+                break;
+            }
+
+
+        }
+        return matchingAirline;
+    }
+
+    // method to update the reservation record
+    public void UpdateReservation(string reservedCode, string flightCode, string newName, string newCitizenship)
+    {
+        // find directory for resources
+        var appLocation = Assembly.GetEntryAssembly().Location;
+        string path = Directory.GetParent(Path.GetDirectoryName(appLocation)).Parent.Parent.Parent.Parent + "\\Resources\\";
+        string filePath = Path.Combine(path, "ReservationMade.csv");
+
+
+        // Read the data from the csv file
+        List<string[]> reservationList = new List<string[]>();
+        using (StreamReader reader = new StreamReader(filePath))
+        {
+            while (!reader.EndOfStream)
+            {
+                string line = reader.ReadLine();
+                string[] data = line.Split(',');
+                reservationList.Add(data);
+            }
+        }
+
+        // Find the reservation record to update
+        bool foundRecord = false;
+        foreach (string[] reservation in reservationList)
+        {
+
+            if (reservation[0] == flightCode && reservation[7] == reservedCode)
+            {
+
+                reservation[5] = newName;
+                reservation[6] = newCitizenship;
+                foundRecord = true;
+
+                break;
+            }
+        }
+
+        // Write the updated data back to the csv file
+        if (foundRecord)
+        {
+            using (StreamWriter writer = new StreamWriter(filePath))
+            {
+                foreach (string[] reservation in reservationList)
+                {
+                    string line = string.Join(",", reservation);
+                    writer.WriteLine(line);
+                }
+            }
+        }
+    }
+
+}

@@ -1,0 +1,486 @@
+﻿@page "/FlightFinder"
+@using System.Text;
+@using System;
+@using System.IO;
+@using System.Reflection;
+@using System.Linq;
+@using System.Runtime.Serialization.Formatters.Binary;
+@using System.Threading;
+@using System.Threading.Tasks;
+@using System.Collections.Generic;
+
+
+
+
+<div class="FlightsParent">
+    <div class="Flights">
+        <h2>Flights</h2>
+    </div>
+    <div class="Reserve">
+        <h2>Reserve</h2>
+    </div>
+</div>
+
+<div class="ReserveParent">
+</div>
+
+
+<div class="FlightFinder">
+    <table>
+        <tr>
+            <th width="60%">
+                <ul>
+                    
+                    @foreach (string flight in FindFlights(submitFlightDay, submitFlightDepart, submitFlightDest))
+                    {
+                        <li>@flight</li>
+                    }
+                </ul>
+            </th>
+            <th width="40%">
+                <div>
+                    <br />
+                    <form>
+                        <table>
+                            <tr>
+                                <th><label for="Flight">Flight:</label></th>
+                                <th><input type="text" id="Flight" name="Flight" value="@flightCode" readonly /><br /></th>
+                            </tr>
+                            <tr>
+                                <th><label for="Airline">Airline:</label></th>
+                                <th><input type="text" id="Airline" name="Airline" value="@airlineName" readonly /><br /></th>
+                            </tr>
+                            <tr>
+                                <th><label for="Day">Day:</label></th>
+                                <th><input type="text" id="Day" name="Day" value="@day" readonly /><br /></th>
+                            </tr>
+                            <tr>
+                                <th><label for="Time">Time:</label></th>
+                                <th><input type="text" id="Time" name="Time" value="@time" readonly /><br /></th>
+                            </tr>
+                            <tr>
+                                <th><label for="Cost">Cost:</label></th>
+                                <th><input type="text" id="Cost" name="Cost" value="@inputCost" readonly /><br /></th>
+                            </tr>
+                            <tr>
+                                <th><label for="Name">Name:</label></th>
+                                <th><input type="text" id="Name" name="Name" @bind="name" /><br /></th>
+                            </tr>
+                            <tr>
+                                <th><label for="Citizenship">Citizenship:</label></th>
+                                <th><input type="text" id="Citizenship" name="Citizenship" @bind="citizenship" /><br /></th>
+                            </tr>
+                        </table>
+                    </form>
+                    <div class="ButtonForReserve">
+                        <div class="Button">
+                            <button type="button" @onclick="ReserveFlight">Reserve</button>
+                        </div>
+                        <div class="ButtonForList">
+                            <div class="Button">
+                                <button type="button" @onclick="DisplayList">View Reservations</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </th>
+        </tr>
+    </table>
+</div>
+<div>
+
+    <form>
+        <table>
+
+            <tr>
+                <th><div>Flight Finder</div></th>
+            </tr>
+            <tr>
+                <th><label for="from">From:</label></th>
+                <th>
+                    <select name="from" id="from" @bind="flightDepart">
+                        @foreach (string airport in airportData)
+                        {
+                            string[] airportAbbreviation = airport.Split(",");
+                            <option value="@airportAbbreviation[0]">@airportAbbreviation[0]</option>
+                        }
+                    </select>
+                </th>
+            </tr>
+            <tr>
+                <th><label for="to">To:</label></th>
+                <th>
+                    <select name="to" id="to" @bind="flightDest">
+                        @foreach (string airport in airportData)
+                        {
+                            string[] airportAbbreviation = airport.Split(",");
+                            <option value="@airportAbbreviation[0]">@airportAbbreviation[0]</option>
+                        }
+                    </select>
+                </th>
+            </tr>
+            <tr>
+                <th><label for="day">Day:</label></th>
+                <th>
+                    <select name="day" id="day" @bind="flightDay">
+                        <option value="none" selected disabled hidden>Select a Day</option>
+                        <option value="monday">Monday</option>
+                        <option value="tuesday">Tuesday</option>
+                        <option value="wednesday">Wednesday</option>
+                        <option value="thursday">Thursday</option>
+                        <option value="friday">Friday</option>
+                        <option value="saturday">Saturday</option>
+                        <option value="sunday">Sunday</option>
+                        <option value="any">Any</option>
+                    </select>
+                </th>
+            </tr>
+
+        </table>
+    </form>
+</div>
+
+<div class="ButtonParent">
+    <div class="Button">
+        <button type="button" @onclick="OnSubmit">Find Flights</button>
+    </div>
+</div>
+
+
+@code {
+    //Define variables
+
+    string flightCode;
+    string airlineName;
+    string day;
+    string time;
+    float inputCost;
+    string name;
+    string citizenship;
+
+    protected string flightDay;
+    protected string flightDepart;
+    protected string flightDest;
+    protected string submitFlightDay;
+    protected string submitFlightDepart;
+    protected string submitFlightDest;
+    string[] airportData = AirportData();
+    List<Reservation> reservations = new List<Reservation>();
+
+
+    //Event methond
+    public void OnSubmit()
+    {
+        submitFlightDay = flightDay;
+        submitFlightDepart = flightDepart;
+        submitFlightDest = flightDest;
+    }
+
+    //Create list of flights that match user input
+    public List<string> FindFlights(string flightDay, string flightDepart, string flightDest)
+    {
+        string flightDayCapital = "";
+        if (flightDay != null)
+        {
+            flightDayCapital = char.ToUpper(flightDay[0]) + flightDay.Substring(1);
+        }
+
+        List<Flights> flightList = FlightList();
+
+        List<string> applicableFlights = new List<string>();
+
+        foreach (Flights flight in flightList)
+        {
+            if (flightDay == "any")
+            {
+                if (flight.DepAirport == flightDepart & flight.DesAirport == flightDest)
+                {
+                    string airline = AirlineData(flight.FlightCode.Substring(0, 2));
+
+                    //creating list of available flights
+
+                    string applicableFlight = "Flight Code:" + flight.FlightCode + ", Flight Airline:" + airline + ", Flight Day:" + flight.FlightDay + ", Flight Time:" + flight.FlightTime + ", Flight Cost:" + flight.FlightPrice;
+                    applicableFlights.Add(applicableFlight);
+                    flightCode = flight.FlightCode;
+                    airlineName = airline;
+                    day = flight.FlightDay;
+                    time = flight.FlightTime;
+                    inputCost = flight.FlightPrice;
+                }
+            }
+            else
+            {
+                if (flight.DepAirport == flightDepart & flight.DesAirport == flightDest & flight.FlightDay == flightDayCapital)
+                {
+                    string airline = AirlineData(flight.FlightCode.Substring(0, 2));
+                    string applicableFlight = "Flight Code:" + flight.FlightCode + ", Flight Airline:" + airline + ", Flight Day:" + flight.FlightDay + ", Flight Time:" + flight.FlightTime + ", Flight Cost:" + flight.FlightPrice;
+                    applicableFlights.Add(applicableFlight);
+                    flightCode = flight.FlightCode;
+                    airlineName = airline;
+                    day = flight.FlightDay;
+                    time = flight.FlightTime;
+                    inputCost = flight.FlightPrice;
+                }
+            }
+        }
+        return applicableFlights;
+    }
+
+    //Method to create flight list 
+    public static List<Flights> FlightList()
+    {
+        List<Flights> flightList = new List<Flights>();
+        string[] flightData = FlightData();
+
+        //for loop that separates the flighta data in the flight class attributes
+        foreach (string flightString in flightData)
+        {
+
+            if (flightString == "")
+            {
+                break;
+            }
+            string[] flightArray = flightString.Split(',');
+            Flights flight = new Flights(flightArray[0], flightArray[1], flightArray[2], flightArray[3], flightArray[4], Int32.Parse(flightArray[5]), float.Parse(flightArray[6]));
+            Console.WriteLine(flight.FlightDay);
+            flightList.Add(flight);
+        }
+        return flightList;
+    }
+
+    //Method to return array with flight info
+    public static string[] FlightData()
+    {
+        string[] flightData = Traveless.Properties.Resources.flights.Split(Environment.NewLine);
+        return flightData;
+    }
+
+    //Method to return array with Airport info
+    public static string[] AirportData()
+    {
+        string[] airportData = Traveless.Properties.Resources.airports.Split(Environment.NewLine);
+        return airportData;
+    }
+
+
+    //Method to return Airline Info with the right names and abbreviations
+    public string AirlineData(string airlineCode)
+    {
+        string[] airlineData = Traveless.Properties.Resources.airlines.Split("\n");
+        string matchingAirline = "";
+        foreach (string airline in airlineData)
+        {
+
+            string[] airlineArray = airline.Split(',');
+
+            if (airlineCode == airlineArray[0])
+            {
+
+                matchingAirline = airlineArray[1];
+                break;
+            }
+
+        }
+        return matchingAirline;
+    }
+
+    //Reservation class to organize the reservation data 
+    [Serializable]
+    public class Reservation
+    {
+        public string FlightCode { get; set; }
+        public string AirlineName { get; set; }
+        public string FlightDay { get; set; }
+        public string FlightTime { get; set; }
+        public float FlightPrice { get; set; }
+        public string Name { get; set; }
+        public string Citizenship { get; set; }
+        public string ReservationCode { get; set; }
+    }
+
+    // method to read the data and create a new list
+    public void reservationUpdateList()
+    {
+        string fileName = "ReservationMade.csv";
+        //find directory for resources
+        var appLocation = Assembly.GetEntryAssembly().Location;
+        string path = Directory.GetParent(Path.GetDirectoryName(appLocation)).Parent.Parent.Parent.Parent + "\\Resources\\";
+        string filePath = Path.Combine(path, fileName);
+
+        //lists for the reservation read and the reservations
+        List<string> reservationReadList = new List<string>();
+        List<Reservation> reservationList = new List<Reservation>();
+
+
+        using (var reader = new StreamReader(filePath))
+        {
+            while (!reader.EndOfStream)
+            {
+                string line = reader.ReadLine();
+
+                reservationReadList.Add(line);
+            }
+        }
+
+        foreach (string line in reservationReadList)
+        {
+            //create new reservation object to add to list
+            string[] reservationData = line.Split(",");
+            Reservation reservation = new Reservation();
+            reservation.FlightCode = reservationData[0];
+            reservation.AirlineName = reservationData[1];
+            reservation.FlightDay = reservationData[2];
+            reservation.FlightTime = reservationData[3];
+            reservation.FlightPrice = float.Parse(reservationData[4]);
+            reservation.Name = reservationData[5];
+            reservation.Citizenship = reservationData[6];
+            reservation.ReservationCode = reservationData[7];
+
+
+            reservationList.Add(reservation);
+        }
+        reservations = reservationList;
+    }
+
+    public void reserveSerialization()
+    {
+        string fileName = "reservationBin.txt";
+        //find directory for resources
+        var appLocation = Assembly.GetEntryAssembly().Location;
+        string path = Directory.GetParent(Path.GetDirectoryName(appLocation)).Parent.Parent.Parent.Parent + "\\Resources\\";
+        string filePath = Path.Combine(path, fileName);
+
+        //Create new binary formatter object
+        BinaryFormatter formatter = new BinaryFormatter();
+
+        //File stream to create the file
+        using (FileStream fs = new FileStream(filePath, FileMode.Create))
+        {
+            foreach (Reservation reservation in reservations)
+            {
+                formatter.Serialize(fs, reservation);
+            }
+
+        }
+    }
+
+    //Reserve flight data 
+    public void ReserveFlight()
+    {
+        var reservation = new Reservation
+            {
+                FlightCode = flightCode,
+                AirlineName = airlineName,
+                FlightDay = day,
+                FlightTime = time,
+                FlightPrice = inputCost,
+                Name = name,
+                Citizenship = citizenship
+            };
+        try
+        {
+            if (flightCode != null && airlineName != null && day != null && time != null && inputCost != 0 && name != null && citizenship != null)
+            {
+                // Generate reservation code
+                var random = new Random();
+                var code = $"{(char)random.Next('A', 'Z' + 1)}{random.Next(1000, 10000)}";
+
+                // Assign reservation code to Reservation object
+                reservation.ReservationCode = code;
+
+                // Add reservation to the list
+                reservations.Add(reservation);
+
+                // Show alert message with reservation code
+                var message = $"Reservation added successfully! Your reservation code is {code}.";
+                var title = "Reservation";
+                var buttonText = "OK";
+
+                Application.Current.MainPage.DisplayAlert(title, message, buttonText);
+                MakeReservation(reservations);
+                reserveSerialization();
+            }
+            else
+            {
+                throw new InvalidInput();
+            }
+        }
+        catch(InvalidInput)
+        {
+            var message = "At least one input field is empty or invalid, please verify your information.";
+            var title = "Error";
+            var buttonText = "OK";
+
+            Application.Current.MainPage.DisplayAlert(title, message, buttonText);
+        }
+        
+
+    }
+
+    //method to show a pop up message
+    public void DisplayList()
+    {
+        reservationUpdateList();
+        string message = "Reservations:\n";
+
+        foreach (Reservation reservation in reservations)
+        {
+            message += $"Flight Code: {reservation.FlightCode}\n";
+            message += $"Airline Name: {reservation.AirlineName}\n";
+            message += $"Flight Day: {reservation.FlightDay}\n";
+            message += $"Flight Time: {reservation.FlightTime}\n";
+            message += $"Flight Price: {reservation.FlightPrice}\n";
+            message += $"Name: {reservation.Name}\n";
+            message += $"Citizenship: {reservation.Citizenship}\n";
+            message += $"Reservation Code: {reservation.ReservationCode}\n";
+            message += "\n";
+        }
+
+        if (reservations.Count == 0)
+        {
+            message += "No reservations found.";
+        }
+        var title = "Reservations";
+        var buttonText = "OK";
+        Application.Current.MainPage.DisplayAlert(title, message, buttonText);
+    }
+
+
+
+
+    // method to make reservation 
+    public static void MakeReservation(List<Reservation> reservations)
+    {
+        string fileName = "ReservationMade.csv";
+        var appLocation = Assembly.GetEntryAssembly().Location;
+        string path = Directory.GetParent(Path.GetDirectoryName(appLocation)).Parent.Parent.Parent.Parent + "\\Resources\\";
+        string filePath = Path.Combine(path, fileName);
+
+        // Specify the delimiter character
+        char delimiter = ',';
+
+        using (var writer = new StreamWriter(filePath, true))
+        {
+            // Use string.Join to write values with the specified delimiter character
+            foreach (var reservation in reservations)
+            {
+                // Convert FlightPrice to string with 2 decimal places
+                string priceString = reservation.FlightPrice.ToString("F2");
+
+                // Use string.Join to join values with the delimiter, with whitespace removed from each field
+                writer.WriteLine(string.Join(delimiter, new string[]
+                {
+                reservation.FlightCode.Trim(),
+                reservation.AirlineName.Trim(),
+                reservation.FlightDay.Trim(),
+                reservation.FlightTime.Trim(),
+                priceString.Trim(), // FlightPrice converted to string
+                reservation.Name.Trim(),
+                reservation.Citizenship.Trim(),
+                reservation.ReservationCode.Trim()
+                }
+                ));
+            }
+        }
+    }
+}
